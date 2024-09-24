@@ -193,14 +193,17 @@ class CurrencyTextInputFormatter extends TextInputFormatter {
     return format;
   }
 
-  void _formatter(String newText) {
-    _newNum = _parseStrToNum(newText);
+  void _formatter(String newText, [num? initialDecimalDigits]) {
+    _newNum = _parseStrToNum(newText, initialDecimalDigits);
     _newString = (_isNegative ? '-' : '') + format.format(_newNum).trim();
   }
 
-  num _parseStrToNum(String text) {
+  num _parseStrToNum(String text, [num? initialDecimalDigits]) {
     num value = num.tryParse(text) ?? 0;
-    if (format.decimalDigits! > 0) {
+
+    if (initialDecimalDigits != null) {
+      value /= pow(10, initialDecimalDigits);
+    } else if (format.decimalDigits! > 0) {
       value /= pow(10, format.decimalDigits!);
     }
     return value;
@@ -289,7 +292,18 @@ class CurrencyTextInputFormatter extends TextInputFormatter {
       return oldValue;
     }
 
-    _formatter(newText);
+    if (oldValue.text.isEmpty ||
+        (oldValue.selection.baseOffset == 0 &&
+            oldValue.selection.extentOffset == oldValue.text.length)) {
+      num? initialDecimalDigits;
+      if (newValue.text.contains('.')) {
+        initialDecimalDigits = newValue.text.split('.').lastOrNull?.length ?? 0;
+      }
+
+      _formatter(newText, initialDecimalDigits);
+    } else {
+      _formatter(newText);
+    }
 
     if (newText.trim() == '' || newText == '00' || newText == '000') {
       return TextEditingValue(
@@ -437,7 +451,13 @@ class CurrencyTextInputFormatter extends TextInputFormatter {
     }
 
     final String newText = value.replaceAll(RegExp('[^0-9]'), '');
-    _formatter(newText);
+
+    num? initialDecimalDigits = 0;
+    if (value.contains('.')) {
+      initialDecimalDigits = value.split('.').lastOrNull?.length ?? 0;
+    }
+
+    _formatter(newText, initialDecimalDigits);
     return _newString;
   }
 
